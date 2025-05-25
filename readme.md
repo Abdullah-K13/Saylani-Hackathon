@@ -99,23 +99,58 @@ The pipeline supports **minute-level real-time ingestion** and processing of:
 
 ---
 
+## 🛠️ Important Implementation Details
+
+### Publicly Hosting SQL Server via Ngrok
+
+To allow AWS Lambda functions secure, remote access to the SQL Server instance running locally, I used **ngrok** to expose the SQL Server publicly with a stable URL and port forwarding. This enabled smooth connectivity from Lambda without complex VPN or VPC configurations.
+
+### AWS Lambda Layers: The Most Challenging Part
+
+One of the trickiest aspects of the project was **creating AWS Lambda Layers** to package dependencies for the Lambda functions, especially those requiring native binaries or libraries (like Python packages used for scraping and API calls).
+
+-   **Key learning:** You **must build Lambda layers on an environment matching Lambda’s runtime OS**.
+    
+-   To achieve this, I provisioned an **EC2 instance running Amazon Linux 2023**, matching the Lambda environment.
+    
+-   All dependencies were installed, zipped, and packaged on this EC2 instance, ensuring compatibility and avoiding runtime errors.
+    
+-   After building the layers, they were uploaded and attached to the respective Lambda functions for seamless execution.
+    
+
+----------
+
 ## ✅ Setup Instructions
 
 ### 1. AWS Setup
-- Create your S3 bucket:
 
-- Deploy all 3 Lambda functions.
-- Set up EventBridge rules (cron: `rate(1 minute)`).
-- Configure SNS topic and filters for each data source.
-- Create the 3 SQS FIFO queues.
-- Connect S3 Event Notifications → SNS Topic.
+-   Create your **S3 bucket** for raw and processed data.
+-   Deploy all 3 ingestion Lambda functions.
+-   Configure **EventBridge rules** with cron expression: `rate(1 minute)`.
+-   Set up **SNS topic** with filters for each data source.
+-   Create 3 **SQS queues**.
+-   Link **S3 Event Notifications** to the SNS topic.
+    
 
-### 2. Credentials
-- Store AWS, SQL Server, Snowflake, and API credentials securely using:
-- **AWS Secrets Manager**, or
-- **Environment variables**
+### 2. Credentials Management
 
----
+-   Store your AWS, SQL Server, Snowflake, and external API credentials securely using:
+    -   **AWS Secrets Manager**, or
+    -   Environment variables with Lambda.
+        
+
+### 3. SQL Server Setup
+
+-   Host your SQL Server instance locally.
+-   Use **ngrok** to expose it publicly.
+-   Update Lambda functions with the ngrok public URL and port for connectivity.
+    
+
+### 4. Lambda Layers Creation (Optional but Recommended)
+
+-   Spin up an **EC2 instance with Amazon Linux 2023**.
+-   Install required dependencies and build Lambda layers there.
+-   Zip and upload layers to AWS Lambda for reuse across functions.
 
 ## 📊 Example Output Paths
 s3://data-hackathon-smit-abdullah-khan/raw/yahoofinance/2025/05/25/0233.csv
